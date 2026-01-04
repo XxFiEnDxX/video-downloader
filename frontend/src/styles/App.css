@@ -1,107 +1,43 @@
+/* ===================================
+   App Container
+   =================================== */
+
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-.main {
+main {
   flex: 1;
-  padding: 2rem 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.container {
-  max-width: 800px;
-  margin: 0 auto;
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
 }
 
-.header {
-  text-align: center;
+/* Remove default focus outline and add custom one */
+*:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+/* Accessibility - Skip to main content */
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  z-index: 999;
+  padding: 1rem 1.5rem;
+  background-color: var(--primary-500);
   color: white;
-  margin-bottom: 3rem;
+  text-decoration: none;
+  border-radius: var(--radius-md);
 }
 
-.header h1 {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-  font-weight: 700;
-}
-
-.subtitle {
-  font-size: 1.2rem;
-  opacity: 0.95;
-  font-weight: 300;
-}
-
-.howto {
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  margin-top: 3rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-}
-
-.howto h2 {
-  color: #333;
-  margin-bottom: 1.5rem;
-  font-size: 1.5rem;
-}
-
-.howto ol {
-  padding-left: 1.5rem;
-}
-
-.howto li {
-  margin-bottom: 0.75rem;
-  color: #666;
-  line-height: 1.6;
-}
-
-.features {
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  margin-top: 2rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-}
-
-.features h2 {
-  color: #333;
-  margin-bottom: 1.5rem;
-  font-size: 1.5rem;
-}
-
-.features ul {
-  list-style: none;
-  padding: 0;
-}
-
-.features li {
-  margin-bottom: 0.75rem;
-  color: #666;
-  font-size: 1.1rem;
-}
-
-.footer {
-  text-align: center;
-  padding: 2rem 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  opacity: 0.9;
-  font-size: 0.9rem;
-}
-
-@media (max-width: 768px) {
-  .header h1 {
-    font-size: 2rem;
-  }
-
-  .subtitle {
-    font-size: 1rem;
-  }
-
-  .howto,
-  .features {
-    padding: 1.5rem;
-  }
+.skip-to-main:focus {
+  left: 50%;
+  transform: translateX(-50%);
+  top: 1rem;
 }
