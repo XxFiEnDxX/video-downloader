@@ -64,7 +64,7 @@ cd frontend
 npm install
 npm run dev
 ```
-Frontend runs on `http://localhost:5173`
+Frontend runs on `http://localhost:5847`
 
 ### Production Mode (Single Server)
 
@@ -263,8 +263,8 @@ cd frontend && npm run build
 
 ### CORS errors in development
 - Backend should be on port 8000
-- Frontend should be on port 5173
-- CORS is enabled for localhost:5173
+- Frontend should be on port 5847
+- CORS is enabled for localhost:5847
 
 ### Download fails
 - Check if URL is from Instagram

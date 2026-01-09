@@ -1,4 +1,5 @@
 import DownloadForm from './DownloadForm'
+import Navigation from './Navigation'
 import '../styles/Hero.css'
 
 const Hero = () => {
@@ -9,6 +10,8 @@ const Hero = () => {
         <div className="hero-shape hero-shape-2"></div>
         <div className="hero-shape hero-shape-3"></div>
       </div>
+
+      <Navigation />
 
       <div className="container">
         <div className="hero-content">

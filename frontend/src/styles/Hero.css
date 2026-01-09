@@ -4,14 +4,14 @@
 
 .hero {
   position: relative;
-  padding: 5rem 0 4rem;
+  padding: 10rem 0 4rem;
   overflow: hidden;
   background: linear-gradient(180deg, #f8f9ff 0%, #ffffff 100%);
 }
 
 @media (min-width: 768px) {
   .hero {
-    padding: 8rem 0 6rem;
+    padding: 12rem 0 6rem;
   }
 }
 
@@ -61,12 +61,16 @@
 }
 
 @keyframes float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
   }
+
   33% {
     transform: translateY(-30px) rotate(120deg);
   }
+
   66% {
     transform: translateY(30px) rotate(240deg);
   }

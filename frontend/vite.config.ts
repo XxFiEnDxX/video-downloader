@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
+    port: 5847,
   },
   build: {
     outDir: '../backend/static',  // Build directly to backend static folder

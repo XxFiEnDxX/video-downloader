@@ -5,6 +5,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pathlib import Path
 from downloader import ReelDownloader
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
 import os
 
 app = FastAPI(
@@ -17,7 +19,7 @@ app = FastAPI(
 # In production, frontend is served from same origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Dev servers
+    allow_origins=["http://localhost:5847", "http://localhost:3000"],  # Dev servers
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,6 +27,10 @@ app.add_middleware(
 
 # Initialize downloader (no credentials needed with yt-dlp)
 downloader = ReelDownloader(download_dir="../downloads")
+
+# Thread pool for running blocking yt-dlp operations
+# 10 threads per worker allows handling multiple downloads concurrently
+executor = ThreadPoolExecutor(max_workers=10)
 
 
 class DownloadRequest(BaseModel):
@@ -58,8 +64,14 @@ async def download_reel(request: DownloadRequest):
             detail="Invalid Instagram URL. Please provide a valid reel or post URL."
         )
 
-    # Download the reel
-    video_path, error = downloader.download_reel(url)
+    # Download the reel in thread pool (non-blocking)
+    # This allows handling multiple downloads concurrently
+    loop = asyncio.get_running_loop()
+    video_path, error = await loop.run_in_executor(
+        executor,
+        downloader.download_reel,
+        url
+    )
 
     if error:
         raise HTTPException(status_code=400, detail=error)

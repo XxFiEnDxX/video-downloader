@@ -1,0 +1,31 @@
+[Unit]
+Description=Instagram Reel Downloader - FastAPI Backend
+After=network.target
+
+[Service]
+Type=notify
+User=deployer
+Group=deployer
+WorkingDirectory=/var/www/instagram-downloader/backend
+Environment="PATH=/var/www/instagram-downloader/backend/venv/bin"
+
+# Gunicorn with 4 workers (each handling 10 concurrent downloads = 40 total)
+ExecStart=/var/www/instagram-downloader/backend/venv/bin/gunicorn main:app \
+    --workers 4 \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --bind 0.0.0.0:8000 \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    --keep-alive 5 \
+    --log-level info
+
+# Auto-restart on failure
+Restart=always
+RestartSec=3
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
