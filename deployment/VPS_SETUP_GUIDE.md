@@ -174,6 +174,7 @@ sudo cp /var/www/instagram-downloader/deployment/nginx.conf /etc/nginx/sites-ava
 # Edit config to add your domain/IP
 sudo nano /etc/nginx/sites-available/instagram-downloader
 # Replace YOUR_DOMAIN_HERE with your VPS IP (for now)
+# Save and exit (Ctrl+X, then Y, then Enter)
 
 # Create symbolic link
 sudo ln -s /etc/nginx/sites-available/instagram-downloader /etc/nginx/sites-enabled/
