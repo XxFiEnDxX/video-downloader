@@ -14,7 +14,7 @@ A production-ready Instagram Reel downloader built with **FastAPI**, **yt-dlp**,
 - ✅ **No database** - Stateless architecture
 - ✅ **Scalable** - Ready for Redis job queue when needed
 
-## Architecture
+## Architecture.
 
 ```
 Single Server (Port 8000)
