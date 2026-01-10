@@ -107,7 +107,7 @@ export async function extractInstagramVideoURL(instagramUrl: string): Promise<Vi
       const match = html.match(pattern);
       if (match) {
         console.log('[Client Extraction] ✅ Found video_url via Method 1');
-        const videoUrl = match[1].replace(/\\u0026/g, '&').replace(/\\//g, '/');
+        const videoUrl = match[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
         console.log('[Client Extraction] Video URL:', videoUrl.substring(0, 100) + '...');
 
         // Extract additional metadata
@@ -116,7 +116,7 @@ export async function extractInstagramVideoURL(instagramUrl: string): Promise<Vi
 
         const result = {
           video_url: videoUrl,
-          thumbnail: thumbnailMatch ? thumbnailMatch[1].replace(/\\//g, '/') : undefined,
+          thumbnail: thumbnailMatch ? thumbnailMatch[1].replace(/\\\//g, '/') : undefined,
           title: titleMatch ? titleMatch[1] : 'Instagram Video',
         };
 
