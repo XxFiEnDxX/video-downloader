@@ -195,8 +195,47 @@ export async function extractInstagramVideoURL(instagramUrl: string): Promise<Vi
       }
     }
 
-    console.log('[Client Extraction] Method 5: Searching for xdt_api__v1__media data...');
-    // Method 5: Modern Instagram API embedded data
+    console.log('[Client Extraction] Method 5: Searching for video_versions array...');
+    // Method 5: Direct video_versions extraction (Instagram 2024/2025)
+    const videoVersionsMatch = html.match(/"video_versions":\s*\[([^\]]+)\]/);
+    if (videoVersionsMatch) {
+      try {
+        console.log('[Client Extraction] Found video_versions array');
+
+        // Extract the array content
+        const arrayContent = '[' + videoVersionsMatch[1] + ']';
+        console.log('[Client Extraction] Array preview:', arrayContent.substring(0, 200) + '...');
+
+        // Parse JSON (need to unescape the backslashes first)
+        const unescapedJson = arrayContent.replace(/\\\//g, '/');
+        const videoVersions = JSON.parse(unescapedJson);
+
+        console.log('[Client Extraction] Parsed video versions:', videoVersions);
+
+        if (videoVersions && videoVersions.length > 0) {
+          // Get first version (usually highest quality)
+          const videoUrl = videoVersions[0].url;
+          const width = videoVersions[0].width;
+
+          console.log('[Client Extraction] ✅ Found video via Method 5 (video_versions)');
+          console.log('[Client Extraction] Video quality: ' + width + 'p');
+
+          const result = {
+            video_url: videoUrl,
+            thumbnail: undefined, // Will be extracted separately if needed
+            title: 'Instagram Video',
+            width: width,
+          };
+          console.log('[Client Extraction] Extraction successful!', result);
+          return result;
+        }
+      } catch (e) {
+        console.warn('[Client Extraction] video_versions parsing failed:', e);
+      }
+    }
+
+    console.log('[Client Extraction] Method 6: Searching for xdt_api__v1__media data...');
+    // Method 6: Modern Instagram API embedded data
     const xdtApiMatch = html.match(/"xdt_api__v1__media__shortcode__web_info"[^{]*({.+?})(?=,"HttpRequest")/s);
     if (xdtApiMatch) {
       try {
@@ -208,7 +247,7 @@ export async function extractInstagramVideoURL(instagramUrl: string): Promise<Vi
           const videoVersions = items[0]?.video_versions;
           if (videoVersions && videoVersions.length > 0) {
             const videoUrl = videoVersions[0].url;
-            console.log('[Client Extraction] ✅ Found video via Method 5 (xdt_api)');
+            console.log('[Client Extraction] ✅ Found video via Method 6 (xdt_api)');
             const result = {
               video_url: videoUrl,
               thumbnail: items[0]?.image_versions2?.candidates?.[0]?.url,
