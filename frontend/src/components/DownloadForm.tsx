@@ -9,15 +9,37 @@ const DownloadForm = () => {
   const [videoFilename, setVideoFilename] = useState('instagram_reel.mp4')
   const [progress, setProgress] = useState(0)
 
-  const handleDownloadFile = () => {
+  const handleDownloadFile = async () => {
     if (!videoUrl) return
 
-    const a = document.createElement('a')
-    a.href = videoUrl
-    a.download = videoFilename
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    try {
+      // Download video from Instagram using user's browser (their IP)
+      // This avoids server rate limiting and uses user's bandwidth
+      const response = await fetch(videoUrl)
+      const blob = await response.blob()
+
+      // Create blob URL and trigger download
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = videoFilename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+
+      // Clean up blob URL
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
+    } catch (err) {
+      console.error('Download failed:', err)
+      // Fallback: try direct link
+      const a = document.createElement('a')
+      a.href = videoUrl
+      a.download = videoFilename
+      a.target = '_blank'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    }
   }
 
   const handlePaste = async () => {
@@ -90,28 +112,26 @@ const DownloadForm = () => {
         throw new Error(errorData.detail || 'Download failed')
       }
 
-      // Get the blob from response
-      const blob = await response.blob()
+      // Get JSON response with video metadata
+      const data = await response.json()
+      console.log('Received video info:', data)
 
-      // Create blob URL for video preview
-      const blobUrl = window.URL.createObjectURL(blob)
-
-      // Get filename from Content-Disposition header or use default
-      const contentDisposition = response.headers.get('Content-Disposition')
-      let filename = 'instagram_reel.mp4'
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/)
-        if (filenameMatch) {
-          filename = filenameMatch[1]
-        }
+      if (!data.success || !data.video_url) {
+        clearInterval(progressInterval)
+        throw new Error('Failed to get video URL')
       }
 
       // Complete progress
       clearInterval(progressInterval)
       setProgress(100)
 
-      // Set video URL for preview
-      setVideoUrl(blobUrl)
+      // Set video URL for preview (direct Instagram URL)
+      setVideoUrl(data.video_url)
+
+      // Generate filename from title or use default
+      const filename = data.title
+        ? `${data.title.replace(/[^a-z0-9]/gi, '_')}.${data.ext || 'mp4'}`
+        : 'instagram_reel.mp4'
       setVideoFilename(filename)
 
       // Reset form
@@ -153,7 +173,7 @@ const DownloadForm = () => {
             className="button"
             disabled={loading}
           >
-            {loading ? 'Downloading...' : 'Download Reel'}
+            {loading ? 'Processing...' : 'Download Reel'}
           </button>
         </div>
 
@@ -168,7 +188,7 @@ const DownloadForm = () => {
             <div className="progress-bar-container">
               <div className="progress-bar" style={{ width: `${progress}%` }}></div>
             </div>
-            <p>Downloading your reel... {progress}%</p>
+            <p>Extracting video info... {progress}%</p>
           </div>
         )}
       </form>

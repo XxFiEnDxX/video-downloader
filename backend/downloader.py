@@ -18,67 +18,82 @@ class ReelDownloader:
         """
         return 'instagram.com/' in url.lower()
 
-    def download_reel(self, url: str) -> Tuple[Optional[Path], Optional[str]]:
+    def get_video_info(self, url: str) -> Tuple[Optional[dict], Optional[str]]:
         """
-        Download Instagram reel/post/video from URL using yt-dlp.
+        Extract Instagram video metadata and direct video URL using yt-dlp.
+        Does NOT download the video - client will download directly.
 
         Returns:
-            Tuple of (video_path, error_message)
+            Tuple of (video_info_dict, error_message)
         """
         try:
             # Basic URL validation
             if not self.is_valid_url(url):
                 return None, "Invalid Instagram URL. Please provide a valid Instagram link."
 
-            # Create unique directory for this download
-            timestamp = int(time.time())
-            download_path = self.download_dir / f"download_{timestamp}"
-            download_path.mkdir(exist_ok=True)
-
-            # Configure yt-dlp options
+            # Configure yt-dlp options with anti-rate-limiting measures
             ydl_opts = {
-                'format': 'best',  # Download best quality
-                'outtmpl': str(download_path / '%(id)s.%(ext)s'),  # Output template
+                'format': 'best',  # Get best quality URL
                 'quiet': True,  # Less verbose output
                 'no_warnings': True,  # Suppress warnings
                 'ignoreerrors': False,  # Fail on errors
                 'extract_flat': False,  # Extract full metadata
-                'retries': 3,  # Retry failed downloads
-                # Optional: Add cookies support for private content (future)
-                # 'cookiefile': 'cookies.txt',
+                'skip_download': True,  # DON'T download - just extract metadata
+                'retries': 5,  # Increased retries for rate limit issues
+                # Anti-rate-limiting headers
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'DNT': '1',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'none',
+                    'Sec-Fetch-User': '?1',
+                    'Cache-Control': 'max-age=0',
+                },
             }
 
-            # Download using yt-dlp
+            # Extract metadata using yt-dlp (no download)
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                print(f"Downloading from: {url}")
+                print(f"Extracting video info from: {url}")
 
-                # Extract info and download
-                info = ydl.extract_info(url, download=True)
+                # Extract info WITHOUT downloading
+                info = ydl.extract_info(url, download=False)
 
                 if not info:
                     return None, "Failed to extract video information."
 
-                # Get the exact downloaded file path from yt-dlp metadata
-                if 'requested_downloads' in info and len(info['requested_downloads']) > 0:
-                    video_path = Path(info['requested_downloads'][0]['filepath'])
-                else:
-                    # Fallback: construct path from metadata
-                    video_id = info.get('id', 'video')
-                    ext = info.get('ext', 'mp4')
-                    video_path = download_path / f"{video_id}.{ext}"
+                # Get direct video URL
+                video_url = info.get('url')
+                if not video_url:
+                    return None, "Could not extract video URL."
 
-                # Verify file exists
-                if not video_path.exists():
-                    return None, "Video file not found after download."
+                # Prepare metadata to return to client
+                video_info = {
+                    'video_url': video_url,
+                    'thumbnail': info.get('thumbnail'),
+                    'title': info.get('title', 'Instagram Video'),
+                    'duration': info.get('duration'),
+                    'width': info.get('width'),
+                    'height': info.get('height'),
+                    'ext': info.get('ext', 'mp4'),
+                    'filesize': info.get('filesize'),
+                }
 
-                print(f"Download successful: {video_path}")
-                return video_path, None
+                print(f"Extraction successful: {video_info['title']}")
+                return video_info, None
 
         except yt_dlp.utils.DownloadError as e:
             error_msg = str(e)
 
             # Provide user-friendly error messages
-            if "private" in error_msg.lower():
+            if "429" in error_msg or "too many requests" in error_msg.lower():
+                return None, "Instagram rate limit reached. Please wait a few minutes and try again."
+            elif "private" in error_msg.lower():
                 return None, "This content is private. Please check the URL or try a public post."
             elif "not found" in error_msg.lower() or "404" in error_msg:
                 return None, "Post not found. It may have been deleted or the URL is incorrect."

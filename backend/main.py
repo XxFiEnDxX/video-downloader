@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pathlib import Path
@@ -25,11 +24,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize downloader (no credentials needed with yt-dlp)
+# Initialize downloader (extracts metadata only, no actual downloads)
+# Downloads directory kept for future use or temporary files
 downloader = ReelDownloader(download_dir="../downloads")
 
-# Thread pool for running blocking yt-dlp operations
-# 10 threads per worker allows handling multiple downloads concurrently
+# Thread pool for running blocking yt-dlp metadata extraction
+# 10 threads per worker allows handling multiple extractions concurrently
 executor = ThreadPoolExecutor(max_workers=10)
 
 
@@ -51,9 +51,12 @@ async def api_root():
 @app.post("/api/download")
 async def download_reel(request: DownloadRequest):
     """
-    Download Instagram reel from provided URL.
+    Extract Instagram video metadata and direct video URL.
 
-    Returns the video file directly.
+    Client will download the video directly from Instagram using the returned URL.
+    This avoids server-side rate limiting and storage issues.
+
+    Returns JSON with video_url and metadata.
     """
     url = request.url.strip()
 
@@ -64,33 +67,36 @@ async def download_reel(request: DownloadRequest):
             detail="Invalid Instagram URL. Please provide a valid reel or post URL."
         )
 
-    # Download the reel in thread pool (non-blocking)
-    # This allows handling multiple downloads concurrently
+    # Extract video info in thread pool (non-blocking)
+    # This allows handling multiple extractions concurrently
     loop = asyncio.get_running_loop()
-    video_path, error = await loop.run_in_executor(
+    video_info, error = await loop.run_in_executor(
         executor,
-        downloader.download_reel,
+        downloader.get_video_info,
         url
     )
 
     if error:
         raise HTTPException(status_code=400, detail=error)
 
-    if not video_path or not video_path.exists():
+    if not video_info or not video_info.get('video_url'):
         raise HTTPException(
             status_code=500,
-            detail="Video download failed. Please try again."
+            detail="Failed to extract video information. Please try again."
         )
 
-    # Return the video file
-    return FileResponse(
-        path=str(video_path),
-        media_type="video/mp4",
-        filename=f"instagram_reel.mp4",
-        headers={
-            "Content-Disposition": 'attachment; filename="instagram_reel.mp4"'
-        }
-    )
+    # Return video metadata and direct URL
+    return {
+        "success": True,
+        "video_url": video_info['video_url'],
+        "thumbnail": video_info.get('thumbnail'),
+        "title": video_info.get('title'),
+        "duration": video_info.get('duration'),
+        "width": video_info.get('width'),
+        "height": video_info.get('height'),
+        "ext": video_info.get('ext'),
+        "filesize": video_info.get('filesize')
+    }
 
 
 @app.get("/api/health")
