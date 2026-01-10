@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react'
 import '../styles/DownloadForm.css'
+import { extractInstagramVideoURL, extractViaServer } from '../utils/instagramParser'
 
 const DownloadForm = () => {
   const [url, setUrl] = useState('')
@@ -87,36 +88,32 @@ const DownloadForm = () => {
         })
       }, 300)
 
-      // Make request to backend (relative path works in both dev and production)
-      const apiUrl = import.meta.env.DEV
-        ? 'http://localhost:8000/api/download'  // Dev: separate servers
-        : '/api/download';  // Production: same server
+      let videoInfo;
 
-      console.log('Sending request to:', apiUrl)
-      console.log('Request body:', { url })
+      try {
+        // Try client-side extraction first (uses user's IP, bypasses VPS rate limits)
+        console.log('Attempting client-side extraction...')
+        videoInfo = await extractInstagramVideoURL(url)
+        console.log('Client-side extraction successful:', videoInfo)
+      } catch (clientError) {
+        console.warn('Client-side extraction failed, trying server fallback:', clientError)
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
-      })
-
-      console.log('Response status:', response.status)
-
-      if (!response.ok) {
-        clearInterval(progressInterval)
-        const errorData = await response.json()
-        console.error('Error response:', errorData)
-        throw new Error(errorData.detail || 'Download failed')
+        try {
+          // Fallback to server-side extraction (may hit rate limits on VPS)
+          videoInfo = await extractViaServer(url)
+          console.log('Server-side extraction successful:', videoInfo)
+        } catch (serverError) {
+          clearInterval(progressInterval)
+          console.error('Both extraction methods failed:', serverError)
+          throw new Error(
+            serverError instanceof Error
+              ? serverError.message
+              : 'Failed to extract video. Please try again later.'
+          )
+        }
       }
 
-      // Get JSON response with video metadata
-      const data = await response.json()
-      console.log('Received video info:', data)
-
-      if (!data.success || !data.video_url) {
+      if (!videoInfo || !videoInfo.video_url) {
         clearInterval(progressInterval)
         throw new Error('Failed to get video URL')
       }
@@ -126,11 +123,11 @@ const DownloadForm = () => {
       setProgress(100)
 
       // Set video URL for preview (direct Instagram URL)
-      setVideoUrl(data.video_url)
+      setVideoUrl(videoInfo.video_url)
 
       // Generate filename from title or use default
-      const filename = data.title
-        ? `${data.title.replace(/[^a-z0-9]/gi, '_')}.${data.ext || 'mp4'}`
+      const filename = videoInfo.title
+        ? `${videoInfo.title.replace(/[^a-z0-9]/gi, '_')}.mp4`
         : 'instagram_reel.mp4'
       setVideoFilename(filename)
 
